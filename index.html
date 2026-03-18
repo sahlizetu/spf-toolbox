@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SPF Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  /* ── DARK THEME (default) ── */
+  [data-theme="dark"] {
+    --bg: #080b12;
+    --bg2: #0d1117;
+    --glass: rgba(255,255,255,0.03);
+    --glass-border: rgba(255,255,255,0.08);
+    --panel-bg: rgba(255,255,255,0.03);
+    --text: #e8edf5;
+    --muted: #4a5568;
+    --muted2: #2d3748;
+    --h1-from: #ffffff;
+    --h1-to: rgba(255,255,255,0.45);
+    --kbd-bg: rgba(255,255,255,0.06);
+    --toggle-bg: rgba(255,255,255,0.06);
+    --toggle-border: rgba(255,255,255,0.1);
+    --toggle-text: #94a3b8;
+    --blob1: rgba(79,142,247,0.12);
+    --blob2: rgba(0,229,160,0.08);
+    --shadow-panel: none;
+  }
+
+  /* ── LIGHT THEME ── */
+  [data-theme="light"] {
+    --bg: #f0f4f8;
+    --bg2: #e8eef4;
+    --glass: rgba(255,255,255,0.7);
+    --glass-border: rgba(0,0,0,0.08);
+    --panel-bg: rgba(255,255,255,0.8);
+    --text: #1a202c;
+    --muted: #64748b;
+    --muted2: #94a3b8;
+    --h1-from: #1a202c;
+    --h1-to: rgba(30,40,60,0.6);
+    --kbd-bg: rgba(0,0,0,0.06);
+    --toggle-bg: rgba(0,0,0,0.05);
+    --toggle-border: rgba(0,0,0,0.1);
+    --toggle-text: #64748b;
+    --blob1: rgba(79,142,247,0.08);
+    --blob2: rgba(0,229,160,0.06);
+    --shadow-panel: 0 4px 24px rgba(0,0,0,0.07);
+  }
+
+  :root {
+    --blue: #4f8ef7;
+    --cyan: #00d4ff;
+    --green: #00c48a;
+    --red: #ef4444;
+    --amber: #f59e0b;
+    --mono: 'DM Mono', monospace;
+    --sans: 'Outfit', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body { transition: background 0.35s, color 0.35s; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 3rem 1.5rem 4rem;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  /* Blobs */
+  .blob {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    z-index: 0;
+    transition: background 0.5s;
+  }
+  .blob-1 {
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, var(--blob1) 0%, transparent 70%);
+    top: -200px; left: -200px;
+    animation: float1 12s ease-in-out infinite;
+  }
+  .blob-2 {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, var(--blob2) 0%, transparent 70%);
+    bottom: -100px; right: -100px;
+    animation: float2 15s ease-in-out infinite;
+  }
+  @keyframes float1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(40px,30px)} }
+  @keyframes float2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-30px,-40px)} }
+
+  .container {
+    width: 100%;
+    max-width: 1400px;
+    position: relative;
+    z-index: 1;
+    animation: fadeUp 0.6s ease both;
+  }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .header-left { flex: 1; min-width: 260px; }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 0.75rem;
+  }
+  .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 10px var(--green);
+    animation: pulse 2s ease infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  h1 {
+    font-family: var(--sans);
+    font-size: clamp(1.9rem, 4vw, 2.8rem);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, var(--h1-from) 30%, var(--h1-to));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    transition: none;
+  }
+  h1 .accent {
+    background: linear-gradient(135deg, var(--blue), var(--cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .subtitle {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--muted);
+    font-weight: 400;
+  }
+  .stats-bar {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+  }
+  .stat-pill {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 100px;
+    padding: 0.28rem 0.75rem;
+    font-size: 0.68rem;
+    font-family: var(--mono);
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: background 0.3s, border-color 0.3s;
+  }
+  .stat-pill .val { color: var(--text); font-weight: 500; }
+
+  /* ── THEME TOGGLE ── */
+  .theme-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    background: var(--toggle-bg);
+    border: 1px solid var(--toggle-border);
+    border-radius: 100px;
+    padding: 0.35rem 0.5rem 0.35rem 0.8rem;
+    cursor: pointer;
+    font-family: var(--sans);
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--toggle-text);
+    transition: all 0.2s;
+    user-select: none;
+    flex-shrink: 0;
+    align-self: flex-start;
+  }
+  .theme-toggle:hover {
+    border-color: var(--blue);
+    color: var(--blue);
+  }
+
+  /* The pill switch */
+  .toggle-track {
+    width: 38px;
+    height: 20px;
+    border-radius: 100px;
+    background: var(--muted2);
+    position: relative;
+    transition: background 0.3s;
+    flex-shrink: 0;
+  }
+  [data-theme="light"] .toggle-track { background: var(--blue); }
+
+  .toggle-thumb {
+    position: absolute;
+    top: 3px; left: 3px;
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.25s cubic-bezier(.4,0,.2,1);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  }
+  [data-theme="light"] .toggle-thumb { transform: translateX(18px); }
+
+  .toggle-icon { font-size: 0.85rem; }
+
+  /* ── PANELS ── */
+  .layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+  }
+  @media(max-width:640px) { .layout { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--panel-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    backdrop-filter: blur(16px);
+    transition: border-color 0.3s, background 0.35s, box-shadow 0.35s;
+    box-shadow: var(--shadow-panel);
+  }
+  .panel:focus-within {
+    border-color: rgba(79,142,247,0.35);
+    box-shadow: 0 0 0 1px rgba(79,142,247,0.12);
+  }
+  .panel-header {
+    padding: 1rem 1.25rem 0.75rem;
+    border-bottom: 1px solid var(--glass-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: border-color 0.3s;
+  }
+  .panel-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .line-count {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--muted);
+    background: var(--glass);
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    transition: all 0.2s;
+    border: 1px solid var(--glass-border);
+  }
+  .line-count.active { color: var(--blue); background: rgba(79,142,247,0.1); border-color: rgba(79,142,247,0.2); }
+
+  textarea {
+    flex: 1;
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    padding: 1.1rem 1.25rem;
+    resize: none;
+    outline: none;
+    min-height: 260px;
+    line-height: 1.9;
+    letter-spacing: 0.01em;
+    transition: color 0.3s;
+  }
+  textarea::placeholder { color: var(--muted2); }
+
+  .hint-text {
+    font-size: 0.67rem;
+    color: var(--muted2);
+    font-family: var(--mono);
+    padding: 0 1.25rem 0.8rem;
+    transition: color 0.3s;
+  }
+  .hint-text span { color: var(--amber); }
+
+  .output-body {
+    flex: 1;
+    padding: 1.1rem 1.25rem;
+    min-height: 260px;
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    line-height: 1.9;
+    overflow-x: auto;
+    overflow-y: auto;
+  }
+  .output-empty {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    color: var(--muted2);
+    font-size: 0.78rem;
+    min-height: 220px;
+    text-align: center;
+    font-family: var(--sans);
+  }
+  .output-empty svg { opacity: 0.2; margin-bottom: 0.4rem; }
+
+  .output-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.55rem;
+    padding: 0.15rem 0;
+    animation: lineIn 0.25s ease both;
+    white-space: nowrap;
+    min-width: max-content;
+  }
+  @keyframes lineIn { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:translateX(0)} }
+  .output-line.ok .line-text { color: var(--green); }
+  .output-line.err .line-text { color: var(--red); font-style: italic; font-size: 0.72rem; }
+  .line-num { font-size: 0.62rem; color: var(--muted2); min-width: 18px; text-align: right; margin-top: 3px; user-select: none; flex-shrink: 0; }
+  .line-icon { font-size: 0.65rem; flex-shrink: 0; margin-top: 3px; }
+  .line-text { word-break: normal; white-space: nowrap; flex: 1; }
+
+  .error-banner {
+    display: none;
+    margin: 0 1.25rem 0.6rem;
+    padding: 0.6rem 0.9rem;
+    background: rgba(239,68,68,0.07);
+    border: 1px solid rgba(239,68,68,0.2);
+    border-radius: 8px;
+    font-size: 0.72rem;
+    color: #f87171;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--sans);
+  }
+  .error-banner.show { display: flex; }
+
+  .panel-footer {
+    padding: 0.85rem 1.25rem;
+    border-top: 1px solid var(--glass-border);
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    transition: border-color 0.3s;
+  }
+
+  button {
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    padding: 0.6rem 1.1rem;
+    transition: all 0.18s;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    white-space: nowrap;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--blue), #6fa3ff);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(79,142,247,0.25);
+    flex: 1;
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(79,142,247,0.4); }
+  .btn-primary:active { transform: translateY(0); }
+
+  .btn-clear {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    color: var(--muted);
+    padding: 0.6rem 0.85rem;
+  }
+  .btn-clear:hover { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.3); color: var(--red); }
+
+  .btn-copy {
+    background: rgba(0,196,138,0.07);
+    border: 1px solid rgba(0,196,138,0.2);
+    color: var(--green);
+    flex: 1;
+  }
+  .btn-copy:hover { background: rgba(0,196,138,0.14); box-shadow: 0 0 20px rgba(0,196,138,0.15); transform: translateY(-1px); }
+  .btn-copy.copied { background: rgba(0,196,138,0.18); border-color: rgba(0,196,138,0.5); }
+  .btn-copy-disabled { opacity: 0.3; pointer-events: none; }
+
+  .shortcut-hint {
+    font-size: 0.63rem;
+    color: var(--muted2);
+    font-family: var(--mono);
+    margin-left: auto;
+  }
+  kbd {
+    background: var(--kbd-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 3px;
+    padding: 0.1rem 0.35rem;
+    font-size: 0.62rem;
+    font-family: var(--mono);
+  }
+</style>
+</head>
+<body>
+
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+
+<div class="container">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="header-left">
+      <div class="eyebrow"><div class="dot"></div> DNS Toolbox</div>
+      <h1>SPF Record <span class="accent">Generator</span></h1>
+      <p class="subtitle">Collez plusieurs lignes — chaque ligne génère son enregistrement TXT SPF.</p>
+      <div class="stats-bar">
+        <div class="stat-pill"><span class="val" id="statLines">0</span>&nbsp;lignes</div>
+        <div class="stat-pill"><span class="val" id="statOk" style="color:var(--green)">0</span>&nbsp;<span style="color:var(--green)">OK</span></div>
+        <div class="stat-pill"><span class="val" id="statErr" style="color:var(--red)">0</span>&nbsp;<span style="color:var(--red)">erreurs</span></div>
+      </div>
+    </div>
+
+    <!-- TOGGLE -->
+    <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle" title="Basculer le thème">
+      <span class="toggle-icon" id="toggleIcon">🌙</span>
+      <span id="toggleLabel">Dark</span>
+      <div class="toggle-track">
+        <div class="toggle-thumb"></div>
+      </div>
+    </button>
+  </div>
+
+  <!-- LAYOUT -->
+  <div class="layout">
+
+    <!-- INPUT -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M4 5h8M4 8h8M4 11h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Entrée
+        </div>
+        <span class="line-count" id="inputCount">0 ligne(s)</span>
+      </div>
+      <textarea
+        id="inputArea"
+        placeholder="domain1,domain2,domain_central&#10;domain3,domain4,domain_hub&#10;domain5,domain6,domain_relay"
+        spellcheck="false"
+      ></textarea>
+      <div class="hint-text">Format : <span>domain1,domain2,domain_central</span></div>
+      <div class="panel-footer">
+        <button class="btn-primary" onclick="generate()">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><polygon points="5,2 14,8 5,14" fill="white"/></svg>
+          Générer
+        </button>
+        <button class="btn-clear" onclick="clearAll()" title="Effacer">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 10h8l1-10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <span class="shortcut-hint"><kbd>Ctrl</kbd>+<kbd>↵</kbd></span>
+      </div>
+    </div>
+
+    <!-- OUTPUT -->
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Résultat
+        </div>
+        <span class="line-count" id="outputCount">0 ligne(s)</span>
+      </div>
+      <div class="error-banner" id="errorBanner">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3.5M8 10.5v.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span id="errorBannerText"></span>
+      </div>
+      <div class="output-body" id="outputBody">
+        <div class="output-empty" id="outputEmpty">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M7 8h10M7 12h7M7 16h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Le résultat apparaîtra ici
+        </div>
+      </div>
+      <div class="panel-footer">
+        <button class="btn-copy btn-copy-disabled" id="copyBtn" onclick="copyAll()">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M11 5V3.5A1.5 1.5 0 009.5 2h-7A1.5 1.5 0 001 3.5v7A1.5 1.5 0 002.5 12H4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span id="copyLabel">Copier tout</span>
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div style="margin-top:2.5rem;text-align:center;font-family:var(--sans);font-size:0.72rem;color:var(--muted);letter-spacing:0.05em;position:relative;z-index:1;">
+  Created by <span style="color:var(--blue);font-weight:700;">CMH9 Admin</span>
+</div>
+
+<script>
+  /* ── THEME ── */
+  const html = document.documentElement;
+  const toggleIcon  = document.getElementById('toggleIcon');
+  const toggleLabel = document.getElementById('toggleLabel');
+
+  // Load saved preference
+  const saved = localStorage.getItem('spf-theme') || 'light';
+  setTheme(saved);
+
+  function toggleTheme() {
+    const current = html.getAttribute('data-theme');
+    setTheme(current === 'dark' ? 'light' : 'dark');
+  }
+
+  function setTheme(t) {
+    html.setAttribute('data-theme', t);
+    localStorage.setItem('spf-theme', t);
+    if (t === 'dark') {
+      toggleIcon.textContent = '🌙';
+      toggleLabel.textContent = 'Dark';
+    } else {
+      toggleIcon.textContent = '☀️';
+      toggleLabel.textContent = 'Light';
+    }
+  }
+
+  /* ── APP ── */
+  const inputArea   = document.getElementById('inputArea');
+  const outputBody  = document.getElementById('outputBody');
+  const outputEmpty = document.getElementById('outputEmpty');
+  const inputCount  = document.getElementById('inputCount');
+  const outputCount = document.getElementById('outputCount');
+  const copyBtn     = document.getElementById('copyBtn');
+  const copyLabel   = document.getElementById('copyLabel');
+  const errorBanner = document.getElementById('errorBanner');
+  const errorBannerText = document.getElementById('errorBannerText');
+
+  let allOutputLines = [];
+
+  inputArea.addEventListener('input', () => {
+    const n = getNonEmptyLines().length;
+    inputCount.textContent = `${n} ligne(s)`;
+    inputCount.classList.toggle('active', n > 0);
+    document.getElementById('statLines').textContent = n;
+  });
+
+  function getNonEmptyLines() {
+    return inputArea.value.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+  }
+
+  function generate() {
+    const lines = getNonEmptyLines();
+    if (!lines.length) return;
+
+    let okCount = 0, errCount = 0;
+    const results = lines.map((line, i) => {
+      const parts = line.split(',').map(p => p.trim());
+      if (parts.length !== 3 || parts.some(p => !p)) {
+        errCount++;
+        return { ok: false, input: line, num: i + 1 };
+      }
+      okCount++;
+      const [d1, d2, dc] = parts;
+      return { ok: true, text: `${d1},${d2},TXT,"v=spf1 include:${dc} -all"`, num: i + 1 };
+    });
+
+    outputBody.innerHTML = '';
+    allOutputLines = [];
+
+    results.forEach((r, idx) => {
+      const div = document.createElement('div');
+      div.className = `output-line ${r.ok ? 'ok' : 'err'}`;
+      div.style.animationDelay = `${idx * 0.035}s`;
+
+      const numEl = document.createElement('span');
+      numEl.className = 'line-num';
+      numEl.textContent = r.num;
+
+      const icon = document.createElement('span');
+      icon.className = 'line-icon';
+      icon.textContent = r.ok ? '✓' : '✕';
+
+      const txt = document.createElement('span');
+      txt.className = 'line-text';
+      txt.textContent = r.ok ? r.text : `Invalide : "${r.input}"`;
+
+      div.append(numEl, icon, txt);
+      outputBody.appendChild(div);
+      if (r.ok) allOutputLines.push(r.text);
+    });
+
+    document.getElementById('statOk').textContent = okCount;
+    document.getElementById('statErr').textContent = errCount;
+    outputCount.textContent = `${okCount} OK`;
+    outputCount.classList.toggle('active', okCount > 0);
+
+    if (errCount > 0) {
+      errorBannerText.textContent = `${errCount} ligne(s) ignorée(s) — format : domain1,domain2,domain_central`;
+      errorBanner.classList.add('show');
+    } else {
+      errorBanner.classList.remove('show');
+    }
+
+    copyBtn.classList.toggle('btn-copy-disabled', okCount === 0);
+    copyLabel.textContent = 'Copier tout';
+    copyBtn.classList.remove('copied');
+  }
+
+  function copyAll() {
+    if (!allOutputLines.length) return;
+    navigator.clipboard.writeText(allOutputLines.join('\n')).then(() => {
+      copyLabel.textContent = '✓ Copié !';
+      copyBtn.classList.add('copied');
+      setTimeout(() => {
+        copyLabel.textContent = 'Copier tout';
+        copyBtn.classList.remove('copied');
+      }, 2200);
+    });
+  }
+
+  function clearAll() {
+    inputArea.value = '';
+    outputBody.innerHTML = '';
+    outputBody.appendChild(outputEmpty);
+    outputEmpty.style.display = '';
+    allOutputLines = [];
+    inputCount.textContent = '0 ligne(s)';
+    inputCount.classList.remove('active');
+    outputCount.textContent = '0 ligne(s)';
+    outputCount.classList.remove('active');
+    errorBanner.classList.remove('show');
+    copyBtn.classList.add('btn-copy-disabled');
+    document.getElementById('statLines').textContent = 0;
+    document.getElementById('statOk').textContent = 0;
+    document.getElementById('statErr').textContent = 0;
+  }
+
+  inputArea.addEventListener('keydown', e => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); generate(); }
+  });
+</script>
+</body>
+</html>
