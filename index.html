@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="fr" data-theme="light">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SPF Generator — DNS Toolbox</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;600;700;800&display=swap" rel="stylesheet"/>
+<style>
+  [data-theme="dark"] {
+    --bg: #080b12; --panel-bg: rgba(255,255,255,0.03); --glass-border: rgba(255,255,255,0.08);
+    --text: #e8edf5; --muted: #4a5568; --muted2: #2d3748;
+    --h1-from: #ffffff; --h1-to: rgba(255,255,255,0.45);
+    --kbd-bg: rgba(255,255,255,0.06); --toggle-bg: rgba(255,255,255,0.06);
+    --toggle-border: rgba(255,255,255,0.1); --toggle-text: #94a3b8;
+    --blob1: rgba(79,142,247,0.12); --blob2: rgba(0,229,160,0.08);
+    --shadow-panel: none; --section-bg: rgba(255,255,255,0.02);
+    --section-border: rgba(255,255,255,0.06);
+  }
+  [data-theme="light"] {
+    --bg: #f0f4f8; --panel-bg: rgba(255,255,255,0.85); --glass-border: rgba(0,0,0,0.08);
+    --text: #1a202c; --muted: #64748b; --muted2: #94a3b8;
+    --h1-from: #1a202c; --h1-to: rgba(30,40,60,0.6);
+    --kbd-bg: rgba(0,0,0,0.06); --toggle-bg: rgba(0,0,0,0.05);
+    --toggle-border: rgba(0,0,0,0.1); --toggle-text: #64748b;
+    --blob1: rgba(79,142,247,0.08); --blob2: rgba(0,229,160,0.06);
+    --shadow-panel: 0 4px 24px rgba(0,0,0,0.07); --section-bg: rgba(255,255,255,0.5);
+    --section-border: rgba(0,0,0,0.06);
+  }
+  :root {
+    --blue: #4f8ef7; --cyan: #00d4ff; --green: #00c48a;
+    --red: #ef4444; --amber: #f59e0b; --orange: #f97316;
+    --purple: #8b5cf6; --pink: #ec4899;
+    --mono: 'DM Mono', monospace; --sans: 'Outfit', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { transition: background 0.35s, color 0.35s; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 3rem 1.5rem 4rem; position: relative; overflow-x: hidden; }
+  .blob { position: fixed; border-radius: 50%; filter: blur(120px); pointer-events: none; z-index: 0; }
+  .blob-1 { width: 600px; height: 600px; background: radial-gradient(circle, var(--blob1) 0%, transparent 70%); top: -200px; left: -200px; animation: float1 12s ease-in-out infinite; }
+  .blob-2 { width: 500px; height: 500px; background: radial-gradient(circle, var(--blob2) 0%, transparent 70%); bottom: -100px; right: -100px; animation: float2 15s ease-in-out infinite; }
+  @keyframes float1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(40px,30px)} }
+  @keyframes float2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-30px,-40px)} }
+  .container { width: 100%; max-width: 1400px; position: relative; z-index: 1; animation: fadeUp 0.6s ease both; }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+
+  /* TOPBAR */
+  .topbar { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+  .header-left { flex: 1; min-width: 260px; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--blue); margin-bottom: 0.75rem; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 10px var(--green); animation: pulse 2s ease infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  h1 { font-family: var(--sans); font-size: clamp(1.9rem,4vw,2.8rem); font-weight: 800; line-height: 1.1; letter-spacing: -0.03em; background: linear-gradient(135deg, var(--h1-from) 30%, var(--h1-to)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .subtitle { margin-top: 0.5rem; font-size: 0.875rem; color: var(--muted); font-weight: 400; }
+
+  /* THEME TOGGLE */
+  .theme-toggle { display: flex; align-items: center; gap: 0.6rem; background: var(--toggle-bg); border: 1px solid var(--toggle-border); border-radius: 100px; padding: 0.35rem 0.5rem 0.35rem 0.8rem; cursor: pointer; font-family: var(--sans); font-size: 0.72rem; font-weight: 600; color: var(--toggle-text); transition: all 0.2s; user-select: none; flex-shrink: 0; align-self: flex-start; }
+  .theme-toggle:hover { border-color: var(--blue); color: var(--blue); }
+  .toggle-track { width: 38px; height: 20px; border-radius: 100px; background: var(--muted2); position: relative; transition: background 0.3s; flex-shrink: 0; }
+  [data-theme="light"] .toggle-track { background: var(--blue); }
+  .toggle-thumb { position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: #fff; transition: transform 0.25s cubic-bezier(.4,0,.2,1); box-shadow: 0 1px 4px rgba(0,0,0,0.2); }
+  [data-theme="light"] .toggle-thumb { transform: translateX(18px); }
+
+  /* ══ UNIFIED NAV BAR ══ */
+  .nav-bar {
+    display: flex;
+    gap: 0.35rem;
+    margin-bottom: 1.75rem;
+    background: var(--panel-bg);
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    padding: 0.35rem;
+    width: fit-content;
+    flex-wrap: wrap;
+    box-shadow: var(--shadow-panel);
+  }
+  .nav-sep {
+    width: 1px; background: var(--glass-border);
+    margin: 0.25rem 0.15rem; border-radius: 1px; align-self: stretch;
+  }
+  .nav-btn {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-family: var(--sans); font-size: 0.78rem; font-weight: 600;
+    cursor: pointer; border: 1px solid transparent;
+    border-radius: 9px; padding: 0.52rem 1.05rem;
+    background: transparent; color: var(--muted);
+    transition: all 0.2s; white-space: nowrap; letter-spacing: 0.01em;
+  }
+  .nav-btn:hover { color: var(--text); background: var(--section-bg); }
+  .nav-btn .nav-tag {
+    font-family: var(--mono); font-size: 0.58rem;
+    padding: 0.12rem 0.38rem; border-radius: 3px; font-weight: 700;
+  }
+  .nav-btn.active {
+    background: var(--section-bg);
+    border-color: var(--nav-color, var(--glass-border));
+    color: var(--nav-color, var(--text));
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  .nav-btn .nav-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--nav-color, var(--muted)); flex-shrink: 0; }
+
+  /* SECTION PANEL */
+  .section-panel { display: none; animation: fadeUp 0.3s ease both; }
+  .section-panel.active { display: block; }
+  .tabs-bar { display: none; } /* hidden — replaced by unified nav */
+  .tdot { display: none; }
+
+  /* STATS */
+  .stats-bar { display: flex; gap: 0.5rem; align-items: center; margin-bottom: 1.1rem; flex-wrap: wrap; }
+  .stat-pill { background: var(--panel-bg); border: 1px solid var(--glass-border); border-radius: 100px; padding: 0.25rem 0.7rem; font-size: 0.67rem; font-family: var(--mono); color: var(--muted); display: flex; align-items: center; gap: 0.3rem; box-shadow: var(--shadow-panel); }
+  .stat-pill .val { font-weight: 500; }
+
+  /* TAB CONTENT */
+  .tab-content { display: none; animation: fadeUp 0.25s ease both; }
+  .tab-content.active { display: block; }
+
+  /* LAYOUT */
+  .layout { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+  @media(max-width:640px) { .layout { grid-template-columns: 1fr; } }
+
+  /* PANEL */
+  .panel { background: var(--panel-bg); border: 1px solid var(--glass-border); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; backdrop-filter: blur(16px); transition: border-color 0.3s, background 0.35s, box-shadow 0.35s; box-shadow: var(--shadow-panel); }
+  .panel:focus-within { border-color: rgba(79,142,247,0.3); }
+  .panel-header { padding: 0.9rem 1.25rem 0.7rem; border-bottom: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: space-between; }
+  .panel-title { font-size: 0.68rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 0.5rem; }
+  .line-count { font-family: var(--mono); font-size: 0.63rem; color: var(--muted); background: var(--section-bg); border: 1px solid var(--glass-border); padding: 0.18rem 0.45rem; border-radius: 4px; transition: all 0.2s; }
+  .line-count.active { color: var(--blue); background: rgba(79,142,247,0.1); border-color: rgba(79,142,247,0.2); }
+
+  /* TEXTAREA */
+  textarea { flex: 1; width: 100%; background: transparent; border: none; color: var(--text); font-family: var(--mono); font-size: 0.8rem; padding: 0.9rem 1.25rem; resize: none; outline: none; line-height: 1.9; letter-spacing: 0.01em; transition: color 0.3s; }
+  textarea::placeholder { color: var(--muted2); }
+
+  /* IP sections */
+  .input-section { display: flex; flex-direction: column; flex: 1; }
+  .field-block { display: flex; flex-direction: column; }
+  .field-block + .field-block { border-top: 1px solid var(--glass-border); }
+  .field-label-bar { display: flex; align-items: center; justify-content: space-between; padding: 0.6rem 1.25rem 0.3rem; }
+  .field-label { font-size: 0.63rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .field-tag { font-family: var(--mono); font-size: 0.6rem; padding: 0.13rem 0.42rem; border-radius: 4px; font-weight: 600; }
+  .tag-blue   { background: rgba(79,142,247,0.1); color: var(--blue); }
+  .tag-orange { background: rgba(249,115,22,0.1); color: var(--orange); }
+  .tag-purple { background: rgba(139,92,246,0.1); color: var(--purple); }
+  .tag-pink   { background: rgba(236,72,153,0.1); color: var(--pink); }
+
+  .hint-text { font-size: 0.65rem; color: var(--muted2); font-family: var(--mono); padding: 0 1.25rem 0.65rem; }
+  .hint-text span { color: var(--amber); }
+
+  /* OUTPUT */
+  .output-body { flex: 1; padding: 1rem 1.25rem; min-height: 280px; font-family: var(--mono); font-size: 0.8rem; line-height: 1.9; overflow-x: auto; overflow-y: auto; }
+  .output-empty { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; color: var(--muted2); font-size: 0.78rem; min-height: 240px; text-align: center; font-family: var(--sans); }
+  .output-empty svg { opacity: 0.2; margin-bottom: 0.4rem; }
+  .output-line { display: flex; align-items: flex-start; gap: 0.55rem; padding: 0.12rem 0; animation: lineIn 0.22s ease both; white-space: nowrap; min-width: max-content; }
+  @keyframes lineIn { from{opacity:0;transform:translateX(-6px)} to{opacity:1;transform:translateX(0)} }
+  .output-line.ok  .line-text { color: var(--green); }
+  .output-line.ok2 .line-text { color: #38bdf8; }
+  .output-line.err .line-text { color: var(--red); font-style: italic; font-size: 0.72rem; white-space: normal; }
+  .line-num  { font-size: 0.6rem; color: var(--muted2); min-width: 18px; text-align: right; margin-top: 3px; user-select: none; flex-shrink: 0; }
+  .line-icon { font-size: 0.63rem; flex-shrink: 0; margin-top: 3px; }
+  .line-text { word-break: normal; white-space: nowrap; flex: 1; }
+
+  .error-banner { display: none; margin: 0 1.25rem 0.6rem; padding: 0.55rem 0.85rem; background: rgba(239,68,68,0.07); border: 1px solid rgba(239,68,68,0.2); border-radius: 8px; font-size: 0.71rem; color: #f87171; align-items: center; gap: 0.5rem; font-family: var(--sans); }
+  .error-banner.show { display: flex; }
+
+  /* FOOTER PANEL */
+  .panel-footer { padding: 0.8rem 1.25rem; border-top: 1px solid var(--glass-border); display: flex; align-items: center; gap: 0.6rem; }
+  button { font-family: var(--sans); font-weight: 600; font-size: 0.78rem; cursor: pointer; border: none; border-radius: 8px; padding: 0.58rem 1.05rem; transition: all 0.18s; display: inline-flex; align-items: center; gap: 0.4rem; white-space: nowrap; }
+  button:active { transform: translateY(0) !important; }
+
+  .btn-blue   { background: linear-gradient(135deg,var(--blue),#6fa3ff); color:#fff; box-shadow:0 4px 20px rgba(79,142,247,.25); flex:1; }
+  .btn-blue:hover   { transform:translateY(-1px); box-shadow:0 6px 28px rgba(79,142,247,.4); }
+  .btn-orange { background: linear-gradient(135deg,var(--orange),#fbbf24); color:#fff; box-shadow:0 4px 20px rgba(249,115,22,.25); flex:1; }
+  .btn-orange:hover { transform:translateY(-1px); box-shadow:0 6px 28px rgba(249,115,22,.4); }
+  .btn-purple { background: linear-gradient(135deg,var(--purple),#a78bfa); color:#fff; box-shadow:0 4px 20px rgba(139,92,246,.25); flex:1; }
+  .btn-purple:hover { transform:translateY(-1px); box-shadow:0 6px 28px rgba(139,92,246,.4); }
+  .btn-pink   { background: linear-gradient(135deg,var(--pink),#f472b6); color:#fff; box-shadow:0 4px 20px rgba(236,72,153,.25); flex:1; }
+  .btn-pink:hover   { transform:translateY(-1px); box-shadow:0 6px 28px rgba(236,72,153,.4); }
+
+  .btn-clear { background:var(--section-bg); border:1px solid var(--glass-border); color:var(--muted); padding:0.58rem 0.82rem; }
+  .btn-clear:hover { background:rgba(239,68,68,.08); border-color:rgba(239,68,68,.3); color:var(--red); }
+  .btn-copy { background:rgba(0,196,138,.07); border:1px solid rgba(0,196,138,.2); color:var(--green); flex:1; }
+  .btn-copy:hover { background:rgba(0,196,138,.14); transform:translateY(-1px); }
+  .btn-copy.copied { background:rgba(0,196,138,.18); border-color:rgba(0,196,138,.5); }
+  .btn-copy-disabled { opacity:.3; pointer-events:none; }
+
+  .shortcut-hint { font-size:0.61rem; color:var(--muted2); font-family:var(--mono); margin-left:auto; }
+  kbd { background:var(--kbd-bg); border:1px solid var(--glass-border); border-radius:3px; padding:0.1rem 0.32rem; font-size:0.6rem; font-family:var(--mono); }
+
+  /* FOOTER */
+  .footer { margin-top:2.5rem; text-align:center; font-family:var(--sans); font-size:0.72rem; color:var(--muted); letter-spacing:0.05em; position:relative; z-index:1; }
+  .footer span { color:var(--blue); font-weight:700; }
+</style>
+</head>
+<body>
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="container">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="header-left">
+      <div class="eyebrow"><div class="dot"></div> DNS Toolbox</div>
+      <h1>SPF Record Generator</h1>
+      <p class="subtitle">Générez des enregistrements SPF — mode <b>Include</b> ou <b>Record A</b>, par domaines ou par IPs.</p>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()">
+      <span id="toggleIcon">☀️</span><span id="toggleLabel">Light</span>
+      <div class="toggle-track"><div class="toggle-thumb"></div></div>
+    </button>
+  </div>
+
+  <!-- UNIFIED NAV BAR -->
+  <div class="nav-bar">
+    <button class="nav-btn active" id="nav-id" onclick="switchNav('id')" style="--nav-color:var(--blue)">
+      <div class="nav-dot"></div>
+      Include — Domaines
+      <span class="nav-tag" style="background:rgba(79,142,247,0.12);color:var(--blue)">include:</span>
+    </button>
+    <button class="nav-btn" id="nav-ii" onclick="switchNav('ii')" style="--nav-color:var(--orange)">
+      <div class="nav-dot" style="background:var(--orange)"></div>
+      Include — IP
+      <span class="nav-tag" style="background:rgba(249,115,22,0.12);color:var(--orange)">ip4:</span>
+    </button>
+    <div class="nav-sep"></div>
+    <button class="nav-btn" id="nav-rd" onclick="switchNav('rd')" style="--nav-color:var(--purple)">
+      <div class="nav-dot" style="background:var(--purple)"></div>
+      Record A — Domaines
+      <span class="nav-tag" style="background:rgba(139,92,246,0.12);color:var(--purple)">a:</span>
+    </button>
+    <button class="nav-btn" id="nav-ri" onclick="switchNav('ri')" style="--nav-color:var(--pink)">
+      <div class="nav-dot" style="background:var(--pink)"></div>
+      Record A — IP
+      <span class="nav-tag" style="background:rgba(236,72,153,0.12);color:var(--pink)">Arecords:</span>
+    </button>
+  </div>
+
+  <!-- ████████████████████████████
+       SECTION : INCLUDE
+  ████████████████████████████ -->
+  <div class="section-panel active" id="sec-include">
+
+    <div class="tabs-bar">
+      <button class="tab-btn t-active-dom-include" id="itab-dom" onclick="switchSubTab('include','dom')">
+        <div class="tdot" style="background:var(--blue)"></div> Mode Domaines
+      </button>
+      <button class="tab-btn" id="itab-ip" onclick="switchSubTab('include','ip')">
+        <div class="tdot" style="background:var(--orange)"></div> Mode IP
+      </button>
+    </div>
+
+    <!-- Include / Mode Domaines -->
+    <div class="tab-content active" id="itc-dom">
+      <div class="stats-bar">
+        <div class="stat-pill"><span class="val" id="id-statL">0</span>&nbsp;lignes</div>
+        <div class="stat-pill"><span class="val" id="id-statOk" style="color:var(--green)">0</span>&nbsp;<span style="color:var(--green)">OK</span></div>
+        <div class="stat-pill"><span class="val" id="id-statErr" style="color:var(--red)">0</span>&nbsp;<span style="color:var(--red)">erreurs</span></div>
+      </div>
+      <div class="layout">
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M4 5h8M4 8h8M4 11h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Entrée</div>
+            <span class="line-count" id="id-ic">0 ligne(s)</span>
+          </div>
+          <textarea id="id-input" placeholder="domain1,domain2,domain_central&#10;domain3,domain4,domain_hub" spellcheck="false" style="min-height:300px"></textarea>
+          <div class="hint-text">Format : <span>domain1,domain2,domain_central</span> — une ligne par enregistrement</div>
+          <div class="panel-footer">
+            <button class="btn-blue" onclick="runGen('id')"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><polygon points="5,2 14,8 5,14" fill="white"/></svg> Générer</button>
+            <button class="btn-clear" onclick="runClear('id')" title="Effacer"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 10h8l1-10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <span class="shortcut-hint"><kbd>Ctrl</kbd>+<kbd>↵</kbd></span>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Résultat</div>
+            <span class="line-count" id="id-oc">0 ligne(s)</span>
+          </div>
+          <div class="error-banner" id="id-eb"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3.5M8 10.5v.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span id="id-ebt"></span></div>
+          <div class="output-body" id="id-out"><div class="output-empty"><svg width="34" height="34" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M7 8h10M7 12h7M7 16h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Le résultat apparaîtra ici</div></div>
+          <div class="panel-footer">
+            <button class="btn-copy btn-copy-disabled" id="id-cb" onclick="runCopy('id')"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M11 5V3.5A1.5 1.5 0 009.5 2h-7A1.5 1.5 0 001 3.5v7A1.5 1.5 0 002.5 12H4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span id="id-cl">Copier tout</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Include / Mode IP -->
+    <div class="tab-content" id="itc-ip">
+      <div class="stats-bar">
+        <div class="stat-pill"><span class="val" id="ii-statD" style="color:var(--blue)">0</span>&nbsp;<span style="color:var(--blue)">domaine(s)</span></div>
+        <div class="stat-pill"><span class="val" id="ii-statI" style="color:var(--orange)">0</span>&nbsp;<span style="color:var(--orange)">IP(s)</span></div>
+        <div class="stat-pill"><span class="val" id="ii-statOk" style="color:var(--green)">0</span>&nbsp;<span style="color:var(--green)">OK</span></div>
+        <div class="stat-pill"><span class="val" id="ii-statErr" style="color:var(--red)">0</span>&nbsp;<span style="color:var(--red)">erreurs</span></div>
+      </div>
+      <div class="layout">
+        <div class="panel">
+          <div class="panel-header"><div class="panel-title"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M4 5h8M4 8h8M4 11h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Entrée</div></div>
+          <div class="input-section">
+            <div class="field-block">
+              <div class="field-label-bar"><span class="field-label">Domaine(s) central</span><span class="field-tag tag-blue" id="ii-dc">0 domaine(s)</span></div>
+              <textarea id="ii-domains" placeholder="example.com&#10;company.org" spellcheck="false" style="min-height:110px"></textarea>
+              <div class="hint-text">Un domaine par ligne</div>
+            </div>
+            <div class="field-block">
+              <div class="field-label-bar"><span class="field-label">Adresses IP</span><span class="field-tag tag-orange" id="ii-ic">0 / 100</span></div>
+              <textarea id="ii-ips" placeholder="192.168.1.1&#10;10.0.0.1&#10;203.0.113.5" spellcheck="false" style="min-height:160px"></textarea>
+              <div class="hint-text">Une IP par ligne <span>(max 100)</span></div>
+            </div>
+          </div>
+          <div class="panel-footer">
+            <button class="btn-orange" onclick="runIPGen('ii')"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><polygon points="5,2 14,8 5,14" fill="white"/></svg> Générer</button>
+            <button class="btn-clear" onclick="runIPClear('ii')" title="Effacer"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 10h8l1-10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <span class="shortcut-hint"><kbd>Ctrl</kbd>+<kbd>↵</kbd></span>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><div class="panel-title"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Résultat</div><span class="line-count" id="ii-oc">0 ligne(s)</span></div>
+          <div class="error-banner" id="ii-eb"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3.5M8 10.5v.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span id="ii-ebt"></span></div>
+          <div class="output-body" id="ii-out"><div class="output-empty"><svg width="34" height="34" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M7 8h10M7 12h7M7 16h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Le résultat apparaîtra ici</div></div>
+          <div class="panel-footer">
+            <button class="btn-copy btn-copy-disabled" id="ii-cb" onclick="runCopy('ii')"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M11 5V3.5A1.5 1.5 0 009.5 2h-7A1.5 1.5 0 001 3.5v7A1.5 1.5 0 002.5 12H4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span id="ii-cl">Copier tout</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ████████████████████████████
+       SECTION : RECORD A
+  ████████████████████████████ -->
+  <div class="section-panel" id="sec-recorda">
+
+    <div class="tabs-bar">
+      <button class="tab-btn t-active-dom-recorda" id="rtab-dom" onclick="switchSubTab('recorda','dom')">
+        <div class="tdot" style="background:var(--purple)"></div> Mode Domaines
+      </button>
+      <button class="tab-btn" id="rtab-ip" onclick="switchSubTab('recorda','ip')">
+        <div class="tdot" style="background:var(--pink)"></div> Mode IP
+      </button>
+    </div>
+
+    <!-- Record A / Mode Domaines -->
+    <div class="tab-content active" id="rtc-dom">
+      <div class="stats-bar">
+        <div class="stat-pill"><span class="val" id="rd-statL">0</span>&nbsp;lignes</div>
+        <div class="stat-pill"><span class="val" id="rd-statOk" style="color:var(--green)">0</span>&nbsp;<span style="color:var(--green)">OK</span></div>
+        <div class="stat-pill"><span class="val" id="rd-statErr" style="color:var(--red)">0</span>&nbsp;<span style="color:var(--red)">erreurs</span></div>
+      </div>
+      <div class="layout">
+        <div class="panel">
+          <div class="panel-header"><div class="panel-title"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M4 5h8M4 8h8M4 11h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Entrée</div><span class="line-count" id="rd-ic">0 ligne(s)</span></div>
+          <textarea id="rd-input" placeholder="domain1,domain2,domain_central&#10;domain3,domain4,domain_hub" spellcheck="false" style="min-height:300px"></textarea>
+          <div class="hint-text">Format : <span>domain1,domain2,domain_central</span></div>
+          <div class="panel-footer">
+            <button class="btn-purple" onclick="runGenA('rd')"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><polygon points="5,2 14,8 5,14" fill="white"/></svg> Générer</button>
+            <button class="btn-clear" onclick="runClear('rd')" title="Effacer"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 10h8l1-10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <span class="shortcut-hint"><kbd>Ctrl</kbd>+<kbd>↵</kbd></span>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><div class="panel-title"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Résultat</div><span class="line-count" id="rd-oc">0 ligne(s)</span></div>
+          <div class="error-banner" id="rd-eb"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3.5M8 10.5v.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span id="rd-ebt"></span></div>
+          <div class="output-body" id="rd-out"><div class="output-empty"><svg width="34" height="34" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M7 8h10M7 12h7M7 16h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Le résultat apparaîtra ici</div></div>
+          <div class="panel-footer">
+            <button class="btn-copy btn-copy-disabled" id="rd-cb" onclick="runCopy('rd')"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M11 5V3.5A1.5 1.5 0 009.5 2h-7A1.5 1.5 0 001 3.5v7A1.5 1.5 0 002.5 12H4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span id="rd-cl">Copier tout</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Record A / Mode IP -->
+    <div class="tab-content" id="rtc-ip">
+      <div class="stats-bar">
+        <div class="stat-pill"><span class="val" id="ri-statD" style="color:var(--purple)">0</span>&nbsp;<span style="color:var(--purple)">domaine(s)</span></div>
+        <div class="stat-pill"><span class="val" id="ri-statI" style="color:var(--pink)">0</span>&nbsp;<span style="color:var(--pink)">IP(s)</span></div>
+        <div class="stat-pill"><span class="val" id="ri-statOk" style="color:var(--green)">0</span>&nbsp;<span style="color:var(--green)">OK</span></div>
+        <div class="stat-pill"><span class="val" id="ri-statErr" style="color:var(--red)">0</span>&nbsp;<span style="color:var(--red)">erreurs</span></div>
+      </div>
+      <div class="layout">
+        <div class="panel">
+          <div class="panel-header"><div class="panel-title"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="14" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M4 5h8M4 8h8M4 11h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Entrée</div></div>
+          <div class="input-section">
+            <div class="field-block">
+              <div class="field-label-bar"><span class="field-label">Domaine(s) central</span><span class="field-tag tag-purple" id="ri-dc">0 domaine(s)</span></div>
+              <textarea id="ri-domains" placeholder="example.com&#10;company.org" spellcheck="false" style="min-height:110px"></textarea>
+              <div class="hint-text">Un domaine par ligne</div>
+            </div>
+            <div class="field-block">
+              <div class="field-label-bar"><span class="field-label">Adresses IP</span><span class="field-tag tag-pink" id="ri-ic">0 / 50</span></div>
+              <textarea id="ri-ips" placeholder="192.168.1.1&#10;10.0.0.1&#10;203.0.113.5" spellcheck="false" style="min-height:160px"></textarea>
+              <div class="hint-text">Une IP par ligne <span>(max 50)</span></div>
+            </div>
+          </div>
+          <div class="panel-footer">
+            <button class="btn-pink" onclick="runIPGenA('ri')"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><polygon points="5,2 14,8 5,14" fill="white"/></svg> Générer</button>
+            <button class="btn-clear" onclick="runIPClear('ri')" title="Effacer"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 10h8l1-10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <span class="shortcut-hint"><kbd>Ctrl</kbd>+<kbd>↵</kbd></span>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header"><div class="panel-title"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M2 8h8M2 12h10" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Résultat</div><span class="line-count" id="ri-oc">0 ligne(s)</span></div>
+          <div class="error-banner" id="ri-eb"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M8 5v3.5M8 10.5v.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg><span id="ri-ebt"></span></div>
+          <div class="output-body" id="ri-out"><div class="output-empty"><svg width="34" height="34" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M7 8h10M7 12h7M7 16h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Le résultat apparaîtra ici</div></div>
+          <div class="panel-footer">
+            <button class="btn-copy btn-copy-disabled" id="ri-cb" onclick="runCopy('ri')"><svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.5"/><path d="M11 5V3.5A1.5 1.5 0 009.5 2h-7A1.5 1.5 0 001 3.5v7A1.5 1.5 0 002.5 12H4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span id="ri-cl">Copier tout</span></button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+<div class="footer">Created by <span>CMH9 Admin</span></div>
+
+<script>
+/* ══ THEME ══ */
+const html=document.documentElement;
+setTheme(localStorage.getItem('spf-theme')||'light');
+function toggleTheme(){setTheme(html.getAttribute('data-theme')==='dark'?'light':'dark');}
+function setTheme(t){
+  html.setAttribute('data-theme',t);localStorage.setItem('spf-theme',t);
+  document.getElementById('toggleIcon').textContent=t==='dark'?'🌙':'☀️';
+  document.getElementById('toggleLabel').textContent=t==='dark'?'Dark':'Light';
+}
+
+/* ══ NAVIGATION ══ */
+// Maps nav id -> {section panel, tab content}
+const navMap = {
+  'id': {sec:'include', tc:'itc-dom'},
+  'ii': {sec:'include', tc:'itc-ip'},
+  'rd': {sec:'recorda', tc:'rtc-dom'},
+  'ri': {sec:'recorda', tc:'rtc-ip'},
+};
+
+function switchNav(key){
+  // Hide all sections
+  document.querySelectorAll('.section-panel').forEach(p=>p.classList.remove('active'));
+  // Hide all tab contents
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  // Deactivate all nav btns
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+
+  const m = navMap[key];
+  document.getElementById('sec-'+m.sec).classList.add('active');
+  document.getElementById(m.tc).classList.add('active');
+  document.getElementById('nav-'+key).classList.add('active');
+}
+
+// Keep old stubs so existing onclick calls don't break
+function switchSection(){}
+function switchSubTab(){}
+
+/* ══ HELPERS ══ */
+function getLines(id){return document.getElementById(id).value.split('\n').map(l=>l.trim()).filter(l=>l);}
+function setEmpty(id){document.getElementById(id).innerHTML='<div class="output-empty"><svg width="34" height="34" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M7 8h10M7 12h7M7 16h5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Le résultat apparaîtra ici</div>';}
+
+function isIPv4(ip){
+  const p=ip.split('.');
+  return p.length===4&&p.every(x=>/^\d+$/.test(x)&&+x>=0&&+x<=255&&String(+x)===x);
+}
+
+function checkDuplicates(arr){
+  const seen={},dups=[];
+  arr.forEach(v=>{const k=v.toLowerCase();if(seen[k]!==undefined){if(!dups.includes(k))dups.push(k);}else seen[k]=1;});
+  return dups;
+}
+
+function renderRows(outId,rows){
+  const ob=document.getElementById(outId);ob.innerHTML='';
+  rows.forEach((r,i)=>{
+    const d=document.createElement('div');d.className=`output-line ${r.cls||'ok'}`;d.style.animationDelay=`${i*0.03}s`;
+    if(r.num!==undefined){const n=document.createElement('span');n.className='line-num';n.textContent=r.num;d.appendChild(n);}
+    const ic=document.createElement('span');ic.className='line-icon';ic.textContent=r.cls==='err'?'✕':'✓';d.appendChild(ic);
+    const tx=document.createElement('span');tx.className='line-text';if(r.cls==='err')tx.style.whiteSpace='normal';tx.textContent=r.text;d.appendChild(tx);
+    ob.appendChild(d);
+  });
+}
+
+function finalizeCopy(prefix,lines){
+  const cb=document.getElementById(prefix+'-cb');
+  cb.classList.toggle('btn-copy-disabled',!lines.length);
+}
+
+/* stored output lines per prefix */
+const store={};
+function runCopy(prefix){
+  const lines=store[prefix]||[];if(!lines.length)return;
+  navigator.clipboard.writeText(lines.join('\n')).then(()=>{
+    const cl=document.getElementById(prefix+'-cl'),cb=document.getElementById(prefix+'-cb');
+    cl.textContent='✓ Copié !';cb.classList.add('copied');
+    setTimeout(()=>{cl.textContent='Copier tout';cb.classList.remove('copied');},2200);
+  });
+}
+
+/* ══ INCLUDE / MODE DOMAINES ══ */
+document.getElementById('id-input').addEventListener('input',()=>{
+  const n=getLines('id-input').length;
+  document.getElementById('id-ic').textContent=`${n} ligne(s)`;
+  document.getElementById('id-ic').classList.toggle('active',n>0);
+  document.getElementById('id-statL').textContent=n;
+});
+document.getElementById('id-input').addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();runGen('id');}});
+
+function runGen(p){
+  const lines=getLines(p+'-input');if(!lines.length)return;
+  let ok=0,err=0;store[p]=[];
+  const rows=lines.map((line,i)=>{
+    const parts=line.split(',').map(x=>x.trim());
+    if(parts.length!==3||parts.some(x=>!x)){err++;return{cls:'err',text:`Invalide : "${line}"`,num:i+1};}
+    ok++;const txt=`${parts[0]},${parts[1]},TXT,"v=spf1 include:${parts[2]} -all"`;store[p].push(txt);
+    return{cls:'ok',text:txt,num:i+1};
+  });
+  renderRows(p+'-out',rows);
+  document.getElementById(p+'-oc').textContent=`${ok} OK`;
+  document.getElementById(p+'-oc').classList.toggle('active',ok>0);
+  const eb=document.getElementById(p+'-eb');
+  if(err>0){document.getElementById(p+'-ebt').textContent=`${err} ligne(s) ignorée(s) — format : domain1,domain2,domain_central`;eb.classList.add('show');}
+  else eb.classList.remove('show');
+  if(p==='id'){document.getElementById('id-statOk').textContent=ok;document.getElementById('id-statErr').textContent=err;}
+  if(p==='rd'){document.getElementById('rd-statOk').textContent=ok;document.getElementById('rd-statErr').textContent=err;}
+  finalizeCopy(p,store[p]);
+  document.getElementById(p+'-cl').textContent='Copier tout';document.getElementById(p+'-cb').classList.remove('copied');
+}
+
+function runClear(p){
+  document.getElementById(p+'-input').value='';setEmpty(p+'-out');store[p]=[];
+  document.getElementById(p+'-ic').textContent='0 ligne(s)';document.getElementById(p+'-ic').classList.remove('active');
+  document.getElementById(p+'-oc').textContent='0 ligne(s)';document.getElementById(p+'-oc').classList.remove('active');
+  document.getElementById(p+'-eb').classList.remove('show');
+  document.getElementById(p+'-cb').classList.add('btn-copy-disabled');
+  if(p==='id'){['id-statL','id-statOk','id-statErr'].forEach(id=>document.getElementById(id).textContent=0);}
+  if(p==='rd'){['rd-statL','rd-statOk','rd-statErr'].forEach(id=>document.getElementById(id).textContent=0);}
+}
+
+/* ══ RECORD A / MODE DOMAINES ══ */
+document.getElementById('rd-input').addEventListener('input',()=>{
+  const n=getLines('rd-input').length;
+  document.getElementById('rd-ic').textContent=`${n} ligne(s)`;
+  document.getElementById('rd-ic').classList.toggle('active',n>0);
+  document.getElementById('rd-statL').textContent=n;
+});
+document.getElementById('rd-input').addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();runGenA('rd');}});
+
+function runGenA(p){
+  const lines=getLines(p+'-input');if(!lines.length)return;
+  let ok=0,err=0;store[p]=[];
+  const rows=lines.map((line,i)=>{
+    const parts=line.split(',').map(x=>x.trim());
+    if(parts.length!==3||parts.some(x=>!x)){err++;return{cls:'err',text:`Invalide : "${line}"`,num:i+1};}
+    ok++;const txt=`${parts[0]},${parts[1]},TXT,"v=spf1 a:${parts[2]} -all"`;store[p].push(txt);
+    return{cls:'ok',text:txt,num:i+1};
+  });
+  renderRows(p+'-out',rows);
+  document.getElementById(p+'-oc').textContent=`${ok} OK`;
+  document.getElementById(p+'-oc').classList.toggle('active',ok>0);
+  const eb=document.getElementById(p+'-eb');
+  if(err>0){document.getElementById(p+'-ebt').textContent=`${err} ligne(s) ignorée(s)`;eb.classList.add('show');}
+  else eb.classList.remove('show');
+  document.getElementById('rd-statOk').textContent=ok;document.getElementById('rd-statErr').textContent=err;
+  finalizeCopy(p,store[p]);
+  document.getElementById(p+'-cl').textContent='Copier tout';document.getElementById(p+'-cb').classList.remove('copied');
+}
+
+/* ══ INCLUDE / MODE IP ══ */
+document.getElementById('ii-domains').addEventListener('input',()=>{
+  const n=getLines('ii-domains').length;
+  document.getElementById('ii-dc').textContent=`${n} domaine(s)`;
+  document.getElementById('ii-statD').textContent=n;
+});
+document.getElementById('ii-ips').addEventListener('input',()=>{
+  const n=getLines('ii-ips').length;
+  const lbl=document.getElementById('ii-ic');lbl.textContent=`${n} / 100`;
+  lbl.style.color=n>100?'var(--red)':n>90?'var(--amber)':'';
+  document.getElementById('ii-statI').textContent=n;
+});
+[document.getElementById('ii-domains'),document.getElementById('ii-ips')].forEach(ta=>{
+  ta.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();runIPGen('ii');}});
+});
+
+function validateIPInput(prefix,domains,ips,maxIPs){
+  const errors=[];
+  if(!domains.length) errors.push('Domaine obligatoire — saisissez au moins un domaine central.');
+  const dupDom=checkDuplicates(domains);
+  dupDom.forEach(d=>errors.push(`Doublon domaine : "${d}" apparaît plusieurs fois — supprimez les doublons.`));
+  if(!ips.length) errors.push('Aucune adresse IP saisie — au moins une IP est requise.');
+  if(ips.length>maxIPs) errors.push(`Limite dépassée : ${ips.length} IPs saisies — maximum autorisé est ${maxIPs}.`);
+  if(ips.length>0&&ips.length<=maxIPs){
+    const dupIP=checkDuplicates(ips);
+    dupIP.forEach(ip=>errors.push(`Doublon IP : "${ip}" apparaît plusieurs fois — supprimez les doublons.`));
+    ips.forEach((ip,i)=>{if(!isIPv4(ip))errors.push(`Ligne ${i+1} — IP invalide : "${ip}" → format attendu : ex. 192.168.1.1`);});
+  }
+  return errors;
+}
+
+function showErrors(outId,ebId,ebtId,errors){
+  const ob=document.getElementById(outId);ob.innerHTML='';
+  errors.forEach((msg,i)=>{
+    const d=document.createElement('div');d.className='output-line err';d.style.animationDelay=`${i*0.04}s`;
+    const ic=document.createElement('span');ic.className='line-icon';ic.textContent='✕';d.appendChild(ic);
+    const tx=document.createElement('span');tx.className='line-text';tx.style.whiteSpace='normal';tx.textContent=msg;d.appendChild(tx);
+    ob.appendChild(d);
+  });
+  document.getElementById(ebId).classList.remove('show');
+}
+
+function runIPGen(p){
+  const domains=getLines(p+'-domains'),ips=getLines(p+'-ips');
+  const errors=validateIPInput(p,domains,ips,100);
+  store[p]=[];
+  if(errors.length){
+    showErrors(p+'-out',p+'-eb',p+'-ebt',errors);
+    document.getElementById(p+'-statOk').textContent=0;document.getElementById(p+'-statErr').textContent=errors.length;
+    document.getElementById(p+'-oc').textContent='0 OK';document.getElementById(p+'-oc').classList.remove('active');
+    document.getElementById(p+'-cb').classList.add('btn-copy-disabled');return;
+  }
+  const ipParts=ips.map(ip=>`ip4:${ip}`).join(' ');
+  const rows=domains.map((dom,i)=>{
+    const txt=`${dom},${dom},TXT,"v=spf1 ${ipParts} -all"`;store[p].push(txt);
+    return{cls:'ok',text:txt,num:i+1};
+  });
+  renderRows(p+'-out',rows);
+  document.getElementById(p+'-statOk').textContent=domains.length;document.getElementById(p+'-statErr').textContent=0;
+  document.getElementById(p+'-oc').textContent=`${domains.length} OK`;document.getElementById(p+'-oc').classList.add('active');
+  document.getElementById(p+'-eb').classList.remove('show');
+  finalizeCopy(p,store[p]);
+  document.getElementById(p+'-cl').textContent='Copier tout';document.getElementById(p+'-cb').classList.remove('copied');
+}
+
+function runIPClear(p){
+  document.getElementById(p+'-domains').value='';document.getElementById(p+'-ips').value='';
+  setEmpty(p+'-out');store[p]=[];
+  const isRI=(p==='ri');
+  document.getElementById(p+'-dc').textContent='0 domaine(s)';
+  document.getElementById(p+'-ic').textContent=isRI?'0 / 50':'0 / 100';
+  document.getElementById(p+'-ic').style.color='';
+  document.getElementById(p+'-oc').textContent='0 ligne(s)';document.getElementById(p+'-oc').classList.remove('active');
+  document.getElementById(p+'-eb').classList.remove('show');
+  document.getElementById(p+'-cb').classList.add('btn-copy-disabled');
+  const stats=isRI?['ri-statD','ri-statI','ri-statOk','ri-statErr']:['ii-statD','ii-statI','ii-statOk','ii-statErr'];
+  stats.forEach(id=>document.getElementById(id).textContent=0);
+}
+
+/* ══ RECORD A / MODE IP ══ */
+document.getElementById('ri-domains').addEventListener('input',()=>{
+  const n=getLines('ri-domains').length;
+  document.getElementById('ri-dc').textContent=`${n} domaine(s)`;
+  document.getElementById('ri-statD').textContent=n;
+});
+document.getElementById('ri-ips').addEventListener('input',()=>{
+  const n=getLines('ri-ips').length;
+  const lbl=document.getElementById('ri-ic');lbl.textContent=`${n} / 50`;
+  lbl.style.color=n>50?'var(--red)':n>40?'var(--amber)':'';
+  document.getElementById('ri-statI').textContent=n;
+});
+[document.getElementById('ri-domains'),document.getElementById('ri-ips')].forEach(ta=>{
+  ta.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();runIPGenA('ri');}});
+});
+
+function runIPGenA(p){
+  const domains=getLines(p+'-domains'),ips=getLines(p+'-ips');
+  const errors=validateIPInput(p,domains,ips,50);
+  store[p]=[];
+  if(errors.length){
+    showErrors(p+'-out',p+'-eb',p+'-ebt',errors);
+    document.getElementById(p+'-statOk').textContent=0;document.getElementById(p+'-statErr').textContent=errors.length;
+    document.getElementById(p+'-oc').textContent='0 OK';document.getElementById(p+'-oc').classList.remove('active');
+    document.getElementById(p+'-cb').classList.add('btn-copy-disabled');return;
+  }
+  const ipList=ips.join(';');
+  const rows=[];
+  domains.forEach((dom,i)=>{
+    const t1=`${dom},${dom},TXT,Arecords:${ipList}`;
+    store[p].push(t1);
+    rows.push({cls:'ok',text:t1,num:i+1});
+  });
+  renderRows(p+'-out',rows);
+  document.getElementById(p+'-statOk').textContent=domains.length;document.getElementById(p+'-statErr').textContent=0;
+  document.getElementById(p+'-oc').textContent=`${domains.length} OK`;document.getElementById(p+'-oc').classList.add('active');
+  document.getElementById(p+'-eb').classList.remove('show');
+  finalizeCopy(p,store[p]);
+  document.getElementById(p+'-cl').textContent='Copier tout';document.getElementById(p+'-cb').classList.remove('copied');
+}
+</script>
+</body>
+</html>
